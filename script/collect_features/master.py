@@ -1,48 +1,51 @@
 import os
 import sys
 
-VEPPATH='/Users/xzhang13/Documents/vep/ensembl-vep/vep'
-EXTRACT_VEP_CANON = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/Brugada/script/extract_vep_canon.R"
+#path of vep command https://www.ensembl.org/info/docs/tools/vep/index.html
+VEPPATH='path/to/vep'
+
+#R script to extract the variant effect annotation on canonical transcripts
+EXTRACT_VEP_CANON = "./extract_vep_canon.R"
 
 DISEASESET = ['arm','cm']
-#BRS_GENE_INFO = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/Brugada/gene_list/brs_icc_mutations_gene.txt"
-ARM_GENE_INFO = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/LQTS/gene_list/icc_mutations/lqts_icc_mutations_gene.txt"
-CM_GENE_INFO = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/CM/gene_list/cm_icc_mutations_gene.txt"
+ARM_GENE_INFO = "../../data/arrhythmia/arm_gene.txt"
+CM_GENE_INFO = "../../data/cardiomyopathy/cm_gene.txt"
 
-ANNOVAR = "/Users/xzhang13/Documents/NGStools/annovar/table_annovar.pl"
-ANNOVAR_DB = "/Users/xzhang13/Documents/NGStools/annovar/humandb"
-CLEAN_ANNOVAR = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/Brugada/script/clean_annovar.R"
+#use annovar annotation script http://annovar.openbioinformatics.org/en/latest/user-guide/download/
+ANNOVAR = "path/to/annovar/table_annovar.pl"
+ANNOVAR_DB = "path/to/annovar/humandb"
+CLEAN_ANNOVAR = "./clean_annovar.R"
 
-ADD_EXAC = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/LQTS/Oxford/add_exac_fields.py"
-EXAC_FILE = "/Users/xzhang13/Documents/git/data/exac/ExAC.r0.3.1.sites.vep.normalized.vcf.gz"
+#http://exac.broadinstitute.org/downloads
+ADD_EXAC = "./add_exac_fields.py"
+EXAC_FILE = "path/to/ExAC.r0.3.1.sites.vep.normalized.vcf.gz"
 
-ADD_PARAZSCORE = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/LQTS/script/add_para_zscore.py"
-PARAZSCORE_FILE = "/Users/xzhang13/Desktop/OneDrive/database/para/hg19.all.para_zscore.tsv.gz"
+#add parazscore https://zenodo.org/record/817898
+ADD_PARAZSCORE = "./add_para_zscore.py"
+PARAZSCORE_FILE = "path/to/hg19.all.para_zscore.tsv.gz"
 
-ADD_MPC = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/LQTS/script/add_MPC_constraint.py"
-MPC_FILE = "/Users/xzhang13/Desktop/OneDrive/database/regional_constraint/fordist_constraint_official_mpc_values.txt.gz"
+#add MPC and misbadness score https://www.biorxiv.org/content/early/2017/06/12/148353
+ADD_MPC = "./add_MPC_constraint.py"
+MPC_FILE = "path/to/fordist_constraint_official_mpc_values.txt.gz"
 
-MERGE_ANNOVAR_EXAC = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/Brugada/script/merge_annovar_exac.py"
+MERGE_ANNOVAR_EXAC = "./merge_annovar_exac.py"
 
-ADD_gnomAD = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/script/add_feature/add_gnomAD.py"
-gnomAD_FILE="/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/Database/gnomAD/icc_missense_gnomAD_AF_nonpass.txt.gz"
+ADD_gnomAD = "./add_gnomAD.py"
+gnomAD_FILE="path/to/gnomAD_AF_nonpass.txt.gz"
 
 
-#BRS_ADD_MSA = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/script/add_msa/add_new_feature_brs.py"
-#ARM_ADD_MSA = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/script/add_msa/add_new_feature_arm.py"
-ADD_MSA = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/script/add_msa/add_msa.py"
+ADD_MSA = "./add_msa.py"
 
-#BRS_GENE_MSA = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/Brugada/msa/"
-ARM_GENE_MSA = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/LQTS/MSA/"
-CM_GENE_MSA = "/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/CM/MSA/"
+#path of the folder containing the MSA file (both nucleotide and AA)
+ARM_GENE_MSA = "../../data/arrhythmia/MSA"
+CM_GENE_MSA = "../../data/cardiomyopathy/MSA/"
 
 if __name__ == '__main__':
     disease = sys.argv[1]
     if disease not in DISEASESET:
         sys.exit("The input disease is not in the supported disease set.")
     input_pathogenic_info = sys.argv[2]
-    ##TODO have a script to check the input format
-    ## CHROM POS REF ALT pathogenic
+    ## The input columns should be in this form: CHROM POS REF ALT pathogenic
 
     input_file_vcf = sys.argv[3]
 
@@ -77,9 +80,6 @@ if __name__ == '__main__':
                       " --out " + prefix + "_vep_canon.txt"
         print extract_command
         os.system(extract_command)
-    #os.remove(prefix+"_vep.tsv")
-
-
 
     #Get the annovar annotation
     print "Step 3: running Annovar"
@@ -89,7 +89,6 @@ if __name__ == '__main__':
     clean_command = "Rscript " + CLEAN_ANNOVAR + " " + input_file_vcf+".hg19_multianno.txt " + prefix + "_annovar.txt"
     print clean_command
     os.system(clean_command)
-    #os.remove(input_file_vcf+".hg19_multianno.txt")
 
     #Join with ExAC
     print "Step 4: getting AF from ExAC"
@@ -102,8 +101,7 @@ if __name__ == '__main__':
     merge_command = "python2 " + MERGE_ANNOVAR_EXAC+" "+prefix+"_annovar.txt " + prefix + "_vep_canon_exac.txt " + prefix + "_vep_canon_exac_annovar.txt"
     print(merge_command)
     os.system(merge_command)
-    #os.remove(prefix+"_annovar.txt")
-    #os.remove(prefix+"_vep_canon_exac.txt")
+
 
     print "Step 6: Adding gnomAD AF"
     gnomAD_command = "python2 " + ADD_gnomAD + " -i " + prefix + "_vep_canon_exac_annovar.txt" + " -p " + gnomAD_FILE + " > " + prefix + "_annotated_1.txt"
@@ -111,13 +109,9 @@ if __name__ == '__main__':
     os.system(gnomAD_command)
 
     print "Step 7: Adding MPC"
-    #parazscore_command = "python2 " + ADD_PARAZSCORE + " -i " + prefix + "_vep_canon_exac_annovar.txt" + " -p " + PARAZSCORE_FILE + " > " + prefix+"_annotated_1.txt"
-    #print parazscore_command
-    #os.system(parazscore_command)
     mpc_command = "python2 " + ADD_MPC + " -i " + prefix + "_annotated_1.txt" + " -p " + MPC_FILE + " > " + prefix + "_annotated_2.txt"
     print(mpc_command)
     os.system(mpc_command)
-    #os.remove(prefix+"_annotated_1.txt")
 
 
     print "Step 8: Adding features from Orthology MSA"
@@ -128,5 +122,3 @@ if __name__ == '__main__':
     msa_command = "python2 " + ADD_MSA + " -d "+disease + " -i " + prefix + "_annotated_2.txt" + " -m " + gene_msa + " -o " + prefix + "_annotated.txt"
     print(msa_command)
     os.system(msa_command)
-    #os.remove(prefix + "_annotated_2.txt")
-

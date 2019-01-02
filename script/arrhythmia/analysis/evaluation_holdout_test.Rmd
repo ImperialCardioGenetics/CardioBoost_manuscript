@@ -1,0 +1,321 @@
+---
+title: "Evaluation on hold-out set on Arrhythmia variants"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r load_package, include=FALSE}
+rm(list=ls())
+library(dplyr)
+library(mlr)
+library(pROC)
+library(cowplot)
+library(precrec)
+library(PRROC)
+setwd("./")
+
+load("../../../data/arrhythmia/preprocess.RData")
+source("../../src/preprocess_test.R")
+source("../../src/predict.R")
+load("../../../data/arrhythmia/ml/train_ada.RData")
+load("../../../data/arrhythmia/arm_holdout_test.RData")
+
+
+```
+
+
+```{r, include=FALSE}
+##Prediction
+test<-predict.cardioboost(train_ada,test)
+
+
+test_prediction<-subset(test,select=c(pathogenic,pathogenicity,MCAP,REVEL))
+```
+
+## Result
+
+
+```{r, include=FALSE}
+### Predictive probablities distribution
+p_ada<-data.frame(classifer="CardioBoost",prob_pathogenic=test_prediction$pathogenicity,class=test_prediction$pathogenic)
+p_mcap<-data.frame(classifer="M-CAP",prob_pathogenic=test_prediction$MCAP,class=test_prediction$pathogenic)
+p_revel<-data.frame(classifer="REVEL",prob_pathogenic=test_prediction$REVEL,class=test_prediction$pathogenic)
+
+
+prob_plot<-function(p_data,name){
+  p_data$class <- factor(p_data$class, levels=c("0", "1"), labels=c("benign","pathogenic"))
+  
+  g<-ggplot(p_data,aes(x=prob_pathogenic,fill=class,color=class))+geom_density(alpha=0.2)+ggtitle(name)
+  if( name=="APPRAISE"){  
+    g<-g+expand_limits(y=c(0,200))}
+  else{
+    g<-g+expand_limits(y=c(0,200))+scale_y_continuous(breaks=c(0,10,30,100,200),trans="log1p")
+  }
+  
+  return(g)
+}
+plot_grid(prob_plot(p_ada,"CardioBoost"),prob_plot(p_mcap,"M-CAP"),prob_plot(p_revel,"REVEL"),ncol = 3)
+
+
+```
+
+### Table 1: Performances measures at clinical relevant measures
+
+```{r, echo=FALSE}
+
+Classifier<-c("CardioBoost","M-CAP","REVEL")
+TPR<-c(measureTPR(test_prediction$pathogenic,ifelse(test_prediction$pathogenicity>=0.90,1,0),1),
+measureTPR(test_prediction$pathogenic,ifelse(test_prediction$MCAP>=0.90,1,0),1),
+measureTPR(test_prediction$pathogenic,ifelse(test_prediction$REVEL>=0.90,1,0),1))
+
+
+PPV<-c(measurePPV(test_prediction$pathogenic,ifelse(test_prediction$pathogenicity>0.9,1,0),1),
+measurePPV(test_prediction$pathogenic,ifelse(test_prediction$MCAP>0.9,1,0),1),
+measurePPV(test_prediction$pathogenic,ifelse(test_prediction$REVEL>0.9,1,0),1))
+
+
+
+FPR<-c(measureFPR(test_prediction$pathogenic,ifelse(test_prediction$pathogenicity>0.9,1,0),0,1),
+measureFPR(test_prediction$pathogenic,ifelse(test_prediction$MCAP>0.9,1,0),0,1),
+measureFPR(test_prediction$pathogenic,ifelse(test_prediction$REVEL>0.9,1,0),0,1))
+
+
+TNR<-c(measureTNR(test_prediction$pathogenic,ifelse(test_prediction$pathogenicity>=0.10,1,0),0),
+measureTNR(test_prediction$pathogenic,ifelse(test_prediction$MCAP>=0.10,1,0),0),
+measureTNR(test_prediction$pathogenic,ifelse(test_prediction$REVEL>=0.10,1,0),0))
+
+NPV<-c(measureNPV(test_prediction$pathogenic,ifelse(test_prediction$pathogenicity>=0.10,1,0),0),
+measureNPV(test_prediction$pathogenic,ifelse(test_prediction$MCAP>=0.10,1,0),0),
+measureNPV(test_prediction$pathogenic,ifelse(test_prediction$REVEL>=0.10,1,0),0))
+
+
+FNR<-c(measureFNR(test_prediction$pathogenic,ifelse(test_prediction$pathogenicity>=0.10,1,0),0,1),
+measureFNR(test_prediction$pathogenic,ifelse(test_prediction$MCAP>=0.10,1,0),0,1),
+measureFNR(test_prediction$pathogenic,ifelse(test_prediction$REVEL>=0.10,1,0),0,1))
+
+pr_clin<-data.frame(TPR,PPV)
+
+clin<-c((sum(test_prediction$pathogenicity<=0.1)+sum(test_prediction$pathogenicity>=0.9))/nrow(test),(sum(test_prediction$MCAP<=0.1)+sum(test_prediction$MCAP>=0.9))/nrow(test),(sum(test_prediction$REVEL<=0.1)+sum(test_prediction$REVEL>=0.9))/nrow(test))
+
+Acc_clin<-c((sum(test_prediction$pathogenicity[test_prediction$pathogenic==0]<=0.1)+sum(test_prediction$pathogenicity[test_prediction$pathogenic==1]>=0.9))/(sum(test_prediction$pathogenicity<=0.1)+sum(test_prediction$pathogenicity>=0.9)),(sum(test_prediction$MCAP[test_prediction$pathogenic==0]<=0.1)+sum(test_prediction$MCAP[test_prediction$pathogenic==1]>=0.9))/(sum(test_prediction$MCAP<=0.1)+sum(test_prediction$MCAP>=0.9)),(sum(test_prediction$REVEL[test_prediction$pathogenic==0]<=0.1)+sum(test_prediction$REVEL[test_prediction$pathogenic==1]>=0.9))/(sum(test_prediction$REVEL<=0.1)+sum(test_prediction$REVEL>=0.9)))
+
+Acc<-c((sum(test_prediction$pathogenicity[test_prediction$pathogenic==0]<=0.1)+sum(test_prediction$pathogenicity[test_prediction$pathogenic==1]>=0.9))/nrow(test),(sum(test_prediction$MCAP[test_prediction$pathogenic==0]<=0.1)+sum(test_prediction$MCAP[test_prediction$pathogenic==1]>=0.9))/nrow(test),(sum(test_prediction$REVEL[test_prediction$pathogenic==0]<=0.1)+sum(test_prediction$REVEL[test_prediction$pathogenic==1]>=0.9))/nrow(test))
+
+In_acc<-c((sum(test_prediction$pathogenicity[test_prediction$pathogenic==0]>=0.9)+sum(test_prediction$pathogenicity[test_prediction$pathogenic==1]<=0.1))/nrow(test),(sum(test_prediction$MCAP[test_prediction$pathogenic==0]>=0.9)+sum(test_prediction$MCAP[test_prediction$pathogenic==1]<=0.1))/nrow(test),(sum(test_prediction$REVEL[test_prediction$pathogenic==0]>=0.9)+sum(test_prediction$REVEL[test_prediction$pathogenic==1]<=0.1))/nrow(test))
+
+
+Non_clin<-c(nrow(subset(test_prediction,pathogenicity>0.1 & pathogenicity<0.9))/nrow(test),nrow(subset(test_prediction,MCAP>0.1 & MCAP<0.9))/nrow(test),nrow(subset(test_prediction,REVEL>0.1 &  REVEL<0.9))/nrow(test))
+
+
+library(data.table)
+clin_result<-data.frame(Classifier=Classifier,TPR=round(TPR*100,1),PPV=round(PPV*100,1),FPR=round(FPR*100,1),TNR=round(TNR*100,1),NPV=round(NPV*100,1),FNR=round(FNR*100,1),Pro_Clin=round(clin*100,1),Acc_clin=round(Acc_clin*100,1),Pro_Acc=round(Acc*100,1),Pro_indeterminate=round(Non_clin*100,1))
+t_clin_result<-transpose(clin_result)
+rownames(t_clin_result)<-colnames(clin_result)
+colnames(t_clin_result)<-rownames(clin_result)
+knitr::kable(t_clin_result)
+
+```
+
+#### Statistical Tests
+
+```{r}
+###TPR
+source("../../src/permutation_test.R")
+tpr.f<-function(d){
+  data<-d
+  measureTPR(data$class,ifelse(data$prob_pathogenic>=0.90,1,0),1)
+}
+
+permutation(p_ada,p_revel,fun=tpr.f,n=10000)
+
+###PPV
+
+ppv.f<-function(data){
+  measurePPV(data$class,ifelse(data$prob_pathogenic>=0.90,1,0),1)
+}
+permutation(p_ada,p_revel,fun=ppv.f,n=10000)
+
+###FPR
+
+fpr.f<-function(data){
+  measureFPR(data$class,ifelse(data$prob_pathogenic>=0.90,1,0),0,1)
+}
+permutation(p_ada,p_mcap,fun=fpr.f,n=10000)
+
+fpr.f<-function(data){
+  measureFPR(data$class,ifelse(data$prob_pathogenic>=0.90,1,0),0,1)
+}
+permutation(p_ada,p_revel,fun=fpr.f,n=10000)
+
+
+###TNR
+tnr.f<-function(data){
+  measureTNR(data$class,ifelse(data$prob_pathogenic<=0.10,0,1),0)
+}
+
+permutation(p_ada,p_mcap,fun=tnr.f,n=10000)
+
+###NPV
+
+npv.f<-function(data){
+  
+  measureNPV(data$class,ifelse(data$prob_pathogenic<=0.10,0,1),0)
+  
+}
+permutation(p_ada,p_mcap,fun=npv.f,n=10000)
+
+###FNR
+
+fnr.f<-function(data){
+  
+  measureFNR(data$class,ifelse(data$prob_pathogenic<=0.10,0,1),0,1)
+  
+}
+permutation(p_ada,p_mcap,fun=fnr.f,n=10000)
+
+
+###Clinicial Actionable variants
+clin.f<-function(data){
+  (sum(data$prob_pathogenic<=0.1)+sum(data$prob_pathogenic>=0.9))/nrow(data)
+}
+permutation(p_ada,p_mcap,clin.f,n=10000)
+
+
+###Clinical Accuracy
+clin_acc.f<-function(data){
+  (sum(data$prob_pathogenic[data$class==0]<=0.1)+sum(data$prob_pathogenic[data$class==1]>=0.9))/(sum(data$prob_pathogenic<=0.1)+sum(data$prob_pathogenic>=0.9))
+}
+permutation(p_ada,p_mcap,clin_acc.f,n=10000)
+
+
+###Accuracy
+acc.f<-function(data){
+  (sum(data$prob_pathogenic[data$class==0]<=0.1)+sum(data$prob_pathogenic[data$class==1]>=0.9))/nrow(data)
+  
+}
+permutation(p_ada,p_mcap,acc.f,n=10000)
+
+
+###Proportion of non-clinical actinal variants
+non_clin.f<-function(data){
+  nrow(subset(data,prob_pathogenic>0.1 & prob_pathogenic<0.9))/nrow(data)
+}
+permutation(p_ada,p_mcap,non_clin.f,n=10000)
+
+
+
+```
+
+### Figure 2: (D)(E) Precision-Recall Curves and ROC Curves
+
+```{r, echo=FALSE}
+##Use package precrec for interpolation calculation
+score<-list(p_ada$prob_pathogenic,p_mcap$prob_pathogenic,p_revel$prob_pathogenic)
+label<-p_ada$class
+mmdat<-mmdata(score,label,modnames=c("CardioBoost","M-CAP","REVEL"))
+sscurves<-evalmod(mmdat,raw_curves = TRUE)
+
+roc<-autoplot(sscurves, "ROC")+geom_line(size = 0.8, alpha = 1)+
+      labs(title= "ROC Curve", 
+           x = "1-Specificity", 
+           y = "Sensitivity")+theme(
+plot.title = element_text( size=15, hjust=0.5),
+axis.title.x = element_text(size = 15),
+axis.title.y = element_text(size = 15)
+)+scale_fill_continuous(guide = guide_legend()) +theme(legend.text = element_text(size = 12))+
+    theme(legend.position="bottom")+theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))+geom_abline(intercept = 0, slope = 1,linetype="dashed")+theme(axis.text.x = element_text(size=14))+theme(axis.text.y = element_text(size=14))
+
+#calculate the baseline precision: 
+
+baseline_precision<-length(which(test_prediction$pathogenic==1))/nrow(test_prediction)
+
+prc<-autoplot(sscurves, "PRC")+geom_line(size = 0.8, alpha = 1)+
+      labs(title= "Precision-Recall Curve", 
+           x = "Recall", 
+           y = "Precision")+ theme(
+plot.title = element_text( size=15, hjust=0.5),
+axis.title.x = element_text(size = 15),
+axis.title.y = element_text(size = 15)
+) +scale_fill_continuous(guide = guide_legend()) +theme(legend.text = element_text(size = 12))+
+    theme(legend.position="bottom")+theme(axis.text.x = element_text(size=14))+theme(axis.text.y = element_text(size=14))+
+  geom_point(aes(x=pr_clin$TPR[1],y=pr_clin$PPV[1]),color="black",shape=16,size=2)+geom_point(aes(x=pr_clin$TPR[2],y=pr_clin$PPV[2]),color="black",shape=16,size=2)+geom_point(aes(x=pr_clin$TPR[3],y=pr_clin$PPV[3]),color="black",shape=16,size=2)+theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))+geom_hline(yintercept=baseline_precision,linetype="dashed")
+
+library(gridExtra)
+grid.arrange(prc,roc,nrow=1)
+
+aucs <- auc(sscurves)
+knitr::kable(data.frame(Classifier=Classifier,PRAUC=round(subset(aucs,curvetypes=="PRC")$aucs*100),ROCAUC=round(subset(aucs,curvetypes=="ROC")$aucs*100)))
+
+```
+
+### Test the significance of PRAUC and ROCAUC
+```{r}
+set.seed(123)
+
+##ROC
+cardioboost_roc<-roc(test_prediction$pathogenic,test_prediction$pathogenicity,percent = TRUE)
+mcap_roc<-roc(test_prediction$pathogenic,test_prediction$MCAP,percent = TRUE)
+revel_roc<-roc(test_prediction$pathogenic,test_prediction$REVEL,percent = TRUE)
+
+#significance test
+roc.test(cardioboost_roc,revel_roc,method="delong")
+
+#Confidence interval
+round(ci.auc(cardioboost_roc,conf.level = 0.95,method="delong"))
+round(ci.auc(mcap_roc,conf.level = 0.95,method="delong"))
+round(ci.auc(revel_roc,conf.level = 0.95,method="delong"))
+
+##PRAUC
+
+pr.f<-function(data){
+  pr.curve(data$prob_pathogenic[data$class==1], data$prob_pathogenic[data$class==0], curve = F)$auc.integral
+}
+
+#significance test
+permutation(p_ada,p_revel,fun=pr.f,n=10000)
+
+#Use Binomial Interval to estimate the CI of PR AUC
+cardioboost_pr<-aucs
+
+source("../../src/binomial_ci.R")
+round(binomial_ci(subset(aucs,curvetypes=="PRC" & modnames=="CardioBoost")$aucs,n=sum(p_ada$class==1),0.05)*100)
+round(binomial_ci(subset(aucs,curvetypes=="PRC" & modnames=="M-CAP")$aucs,n=sum(p_ada$class==1),0.05)*100)
+round(binomial_ci(subset(aucs,curvetypes=="PRC" & modnames=="REVEL")$aucs,n=sum(p_ada$class==1),0.05)*100)
+
+```
+
+
+### Figure 2(E): Brier Score
+```{r}
+
+br<-c(measureBrier(test_prediction$pathogenicity,test_prediction$pathogenic,0,1),
+measureBrier(test_prediction$MCAP,test_prediction$pathogenic,0,1),
+measureBrier(test_prediction$REVEL,test_prediction$pathogenic,0,1))
+
+
+knitr::kable(data.frame(Classifier=Classifier,Brier_Score=round(br,2)))
+
+
+#significance tests
+br.f<-function(data){
+  measureBrier(data$prob_pathogenic, data$class,0,1)
+}
+permutation(p_ada,p_mcap,fun=br.f,n=10000)
+permutation(p_ada,p_revel,fun=br.f,n=10000)
+
+```
+
+
+
+
+
+
+
+

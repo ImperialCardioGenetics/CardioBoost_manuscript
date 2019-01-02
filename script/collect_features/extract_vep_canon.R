@@ -4,13 +4,13 @@ rm(list=ls())
 require(dplyr)
 
 option_list = list(
-   make_option(c("-p", "--pathogenic"), type="character", default=NULL, 
+   make_option(c("-p", "--pathogenic"), type="character", default=NULL,
                help="with clinical significance", metavar="character"),
   make_option(c("-t","--transcript"),type="character",default=NULL,help="gene-canonical transcript file",metavar="character"),
   make_option(c("-v","--vep"),type="character",default=NULL,help="variants list with vep annotations",metavar="character"),
-  make_option(c("-o", "--out"), type="character", default="out.txt", 
+  make_option(c("-o", "--out"), type="character", default="out.txt",
               help="output file name [default= %default]", metavar="character")
-); 
+);
 
 opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
@@ -30,15 +30,6 @@ gene_info_file=opt$transcript
 output_file=opt$out
 
 
-
-##########test
-#p_file="/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/ARM/test/gnomad/add_feature_0524/arm_snp_gnomad.txt"
-#gene_info_file="/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/LQTS/gene_list/icc_mutations/lqts_icc_mutations_gene.txt"
-#vep_file="/Users/xzhang13/Desktop/OneDrive/OneDrive - Imperial College London/Project1/ARM/test/gnomad/add_feature_0524/arm_snp_gnomad_vep.tsv"
-#output_file="/Users/xzhang13/Desktop/OneDrive/OneDrive\ -\ Imperial\ College\ London/Project1/ARM/test/gnomad/add_feature_0524/arm_snp_gnomad_vep_canon.txt"
-###########test
-
-
 patho<-read.table(p_file,header=TRUE,sep="\t")
 colnames(patho)<-tolower(colnames(patho))
 patho[,"variation"]=paste(patho[,"chrom"],patho[,"pos"],patho[,"ref"],patho[,"alt"],sep = "_")
@@ -46,7 +37,7 @@ gene_info<-read.table(gene_info_file,header=TRUE,sep="\t")
 
 #clinvar$variation<-paste(paste(clinvar[,'chrom'],clinvar[,'pos'],sep="_"),paste(clinvar[,'ref'],clinvar[,'alt'],sep="/"),sep="_")
 vep_variants<-read.table(vep_file,header=FALSE,comment.char = "#",stringsAsFactors = FALSE)
-colnames(vep_variants)<-c("Uploaded_variation","Location",	"Allele","Gene","Feature","Feature_type",	
+colnames(vep_variants)<-c("Uploaded_variation","Location",	"Allele","Gene","Feature","Feature_type",
                            "Consequence",	"cDNA_position",	"CDS_position",	"Protein_position",	"Amino_acids",
                            "Codons","Existing_variation","ALLELE_NUM","IMPACT","DISTANCE",	"STRAND",	"FLAGS",	"MINIMISED",	"SYMBOL",
                             "SYMBOL_SOURCE",	"HGNC_ID",	"HGVSc",	"HGVSp",	"HGVS_OFFSET")
@@ -70,7 +61,6 @@ l=strsplit(as.character(vep_can$Uploaded_variation),"_")
 df=data.frame(t(sapply(l,c)))
 chr=df[,1]
 pos=df[,2]
-#allele=data.frame(t(sapply(strsplit(as.character(df[,3]),"/"),c)))
 ref=df[,3]
 alt=df[,4]
 
@@ -109,5 +99,3 @@ df=df[inv!=1,]
 #table(df$pathogenic)
 
 write.table(df,file=output_file,row.names=FALSE,sep="\t",quote=FALSE,col.names =TRUE)
-
-
