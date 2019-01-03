@@ -17,6 +17,7 @@ library(pROC)
 library(cowplot)
 library(precrec)
 library(PRROC)
+library(data.table)
 setwd("./")
 
 load("../../../data/arrhythmia/preprocess.RData")
