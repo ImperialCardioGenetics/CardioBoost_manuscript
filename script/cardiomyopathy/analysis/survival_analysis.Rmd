@@ -15,10 +15,7 @@ rm(list=ls())
 
 sarc_gene<-c("ACTC1","MYBPC3","MYH7","MYL2","MYL3","TNNI3","TNNT2","TPM1")
 non_sarc_gene<-c("GLA","LAMP2","LMNA","PRKAG2","TTR")
-load("../../../data/cardiomyopathy/2018Q1_outcome_genetics_v2.RData")
-
-
-genotype<-subset(genotype,select=c(age,Composite_Overall,pathogenicity,MCAP,REVEL,SarcStatus,Gen_Mutation,Gen_Gene_Name,Patient_ID))
+load("../../../data/cardiomyopathy/share_outcome_genetics.RData")
 
 table(genotype$SarcStatus)
 outcome_sarc<-subset(genotype,is.element(SarcStatus,c("SARC(+)","SARC(U)","SARC(-)","SHaRe-Genotype Negative")))
