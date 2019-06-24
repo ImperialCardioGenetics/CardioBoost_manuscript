@@ -20,14 +20,18 @@ Usage:
 The second argument denotes the disease type: 'cm' for cardiomyopathies and 'arm' for arrhythmias.
 
 The third argument denotes a list of variants in table format. For example: 
+
 | CHROM |POS  |REF  |ALT|SYMBOL|pathogenic|
 |--|--|--|--|--|--|
 |3 | 38655272 | C | T | SCN5A | 1| .
 
 The forth argument denotes a list of variants in [VCF format](https://en.wikipedia.org/wiki/Variant_Call_Format). The ID field of VCF format is the concatenate genomic coordinate of the variants. For example:
-| #CHROM |POS  |ID|REF  |ALT|QUAL|FILTER|INFO|
-|--|--|--|--|--|--|--|--|--|
-|3 | 38655272 | 3_38655272_C_T| C | T | . | .|.| .
+
+| #CHROM|POS |ID|REF|ALT|QUAL|FILTER|INFO|
+|--|--|--|--|--|--|--|--|
+|3 |38655272|3_38655272_C_T|C|T|.|.|.|.
+
+
 
 
 ### Variant Classification on Cardiomyopathy and Evalutation 
