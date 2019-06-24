@@ -1,0 +1,117 @@
+---
+title: "or_calculation_MCAP"
+author: "Xiaolei"
+date: "21/06/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+setwd("./")
+source("../../src/or_ci.R")
+
+load("../../../data/cardiomyopathy/share_variant_count.RData")
+load("../../../data/cardiomyopathy/prediction/cm_prediction_full.RData")
+
+
+patient_number<-5665
+gnomAD_number<-138632
+```
+
+
+
+```{r or_raw, include=FALSE}
+
+gene_list<-unique(variant_count$gene)
+gene_list
+or_raw=data.frame(gene=gene_list)
+case_freq_gene<-aggregate(case_freq~gene,data=variant_count,sum)
+or_raw$case_freq_gene<-case_freq_gene[match(gene_list,case_freq_gene$gene),]$case_freq
+
+gnomAD_freq_gene<-aggregate(gnomAD_AF~gene,data=cm_prediction,sum)
+or_raw$gnomAD_freq_gene<-gnomAD_freq_gene[match(gene_list,gnomAD_freq_gene$gene),]$gnomAD_AF
+
+or_raw[,c("case_freq_gene","gnomAD_freq_gene")]=t(apply(or_raw[,c("case_freq_gene","gnomAD_freq_gene")],1,function(x){check_input(x[1],x[2])}))
+or_raw$or<-or(or_raw$case_freq_gene,or_raw$gnomAD_freq_gene)
+
+or_raw$ci_lower<-or_ci_lower(or_raw$case_freq_gene,or_raw$gnomAD_freq_gene,patient_number,gnomAD_number)
+or_raw$ci_upper<-or_ci_upper(or_raw$case_freq_gene,or_raw$gnomAD_freq_gene,patient_number,gnomAD_number)
+
+sarc_gene<-c("ACTC1","MYBPC3","MYH7","MYL2","MYL3","TNNI3","TNNT2","TPM1")
+non_sarc_gene<-c("GLA","LAMP2","LMNA","PRKAG2","TTR")
+
+
+or_raw[,2:6]<-round(or_raw[,2:6],1)
+
+```
+
+
+
+```{r pathogenic_novel, include=FALSE}
+## or with MCAP pathogenic prediction excluding the ones seen in training data
+or_patho_novel=data.frame(gene=gene_list)
+
+case_freq_gene<-aggregate(case_freq~gene,data=subset(variant_count,MCAP>=0.9 & isTrain==FALSE),sum)
+or_patho_novel$case_freq_gene<-case_freq_gene[match(gene_list,case_freq_gene$gene),]$case_freq
+or_patho_novel$case_freq_gene<-ifelse(is.na(or_patho_novel$case_freq_gene),0,or_patho_novel$case_freq_gene)
+
+gnomAD_freq_gene<-aggregate(gnomAD_AF~gene,data=subset(cm_prediction,MCAP>=0.9 & isTrain==FALSE),sum)
+or_patho_novel$gnomAD_freq_gene<-gnomAD_freq_gene[match(gene_list,gnomAD_freq_gene$gene),]$gnomAD_AF
+or_patho_novel$gnomAD_freq_gene<-ifelse(is.na(or_patho_novel$gnomAD_freq_gene),0,or_patho_novel$gnomAD_freq_gene)
+
+or_patho_novel[,c("case_freq_gene","gnomAD_freq_gene")]=t(apply(or_patho_novel[,c("case_freq_gene","gnomAD_freq_gene")],1,function(x){check_input(x[1],x[2],predict = "pathogenic")}))
+or_patho_novel$or<-or(or_patho_novel$case_freq_gene,or_patho_novel$gnomAD_freq_gene)
+
+or_patho_novel$ci_lower<-or_ci_lower(or_patho_novel$case_freq_gene,or_patho_novel$gnomAD_freq_gene,patient_number,gnomAD_number)
+or_patho_novel$ci_upper<-or_ci_upper(or_patho_novel$case_freq_gene,or_patho_novel$gnomAD_freq_gene,patient_number,gnomAD_number)
+
+sarc_gene<-c("ACTC1","MYBPC3","MYH7","MYL2","MYL3","TNNI3","TNNT2","TPM1")
+non_sarc_gene<-c("GLA","LAMP2","LMNA","PRKAG2","TTR")
+
+or_patho_novel[,2:6]<-round(or_patho_novel[,2:6],1)
+```
+
+
+
+```{r, include=FALSE}
+## or with CardioBoost benign prediction excluding the ones seen in the training data
+or_benign_novel=data.frame(gene=gene_list)
+
+case_freq_gene<-aggregate(case_freq~gene,data=subset(variant_count,MCAP<=0.1  & isTrain==FALSE),sum)
+or_benign_novel$case_freq_gene<-case_freq_gene[match(gene_list,case_freq_gene$gene),]$case_freq
+or_benign_novel$case_freq_gene<-ifelse(is.na(or_benign_novel$case_freq_gene),0,or_benign_novel$case_freq_gene)
+
+
+gnomAD_freq_gene<-aggregate(gnomAD_AF~gene,data=subset(cm_prediction,MCAP<=0.1  & isTrain==FALSE),sum)
+or_benign_novel$gnomAD_freq_gene<-gnomAD_freq_gene[match(gene_list,gnomAD_freq_gene$gene),]$gnomAD_AF
+or_benign_novel$gnomAD_freq_gene<-ifelse(is.na(or_benign_novel$gnomAD_freq_gene),0,or_benign_novel$gnomAD_freq_gene)
+
+or_benign_novel[,c("case_freq_gene","gnomAD_freq_gene")]=t(apply(or_benign_novel[,c("case_freq_gene","gnomAD_freq_gene")],1,function(x){check_input(x[1],x[2],predict="benign")}))
+or_benign_novel$or<-apply(or_benign_novel[,c("case_freq_gene","gnomAD_freq_gene")],1,function(x){or(x[1],x[2],predict="benign")})
+  
+or_benign_novel$ci_lower<-apply(or_benign_novel[,c("case_freq_gene","gnomAD_freq_gene")],1,function(x){or_ci_lower(x[1],x[2],patient_number,gnomAD_number,predict="benign")})
+or_benign_novel$ci_upper<-apply(or_benign_novel[,c("case_freq_gene","gnomAD_freq_gene")],1,function(x){or_ci_upper(x[1],x[2],patient_number,gnomAD_number,predict="benign")})
+
+sarc_gene<-c("ACTC1","MYBPC3","MYH7","MYL2","MYL3","TNNI3","TNNT2","TPM1")
+non_sarc_gene<-c("GLA","LAMP2","LMNA","PRKAG2","TTR")
+
+or_benign_novel[,2:6]<-round(or_benign_novel[,2:6],1)
+```
+
+```{r summary, echo=FALSE}
+
+or_MCAP<-data.frame(gene=gene_list,or_raw=or_raw$or,or_raw_ci=paste("(",or_raw$ci_lower,or_raw$ci_upper,")"),
+                       or_patho_novel=or_patho_novel$or,or_patho_novel_ci=paste("(",or_patho_novel$ci_lower,or_patho_novel$ci_upper,")"),
+                       
+                       or_benign_novel=or_benign_novel$or,
+                       or_benign_novel_ci=paste("(",or_benign_novel$ci_lower,or_benign_novel$ci_upper,")"))
+
+sarc_gene<-c("ACTC1","MYBPC3","MYH7","MYL2","MYL3","TNNI3","TNNT2","TPM1")
+non_sarc_gene<-c("GLA","LAMP2","LMNA","PRKAG2","TTR")
+
+or_MCAP<-or_MCAP[order(or_MCAP$or_raw,decreasing = TRUE),]
+or_MCAP<-subset(or_MCAP,is.element(gene,sarc_gene))
+or_MCAP
+
+```
