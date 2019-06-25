@@ -1,8 +1,6 @@
 ##Given a test set of variants, preprocess its annotation, get the features of the variants and make pathogenic prediction on them
 library(mlr)
 
-
-
 imputed.cardioboost<-function(data){
   data<-subset(data,is.element(gene,disease_gene))
   data<-preprocess(data)
@@ -16,7 +14,6 @@ scaled.cardioboost<-function(data_imputed){
   data_scaled<-select_feature(data_scaled)
   data_scaled  
 }
-
 
 predict.cardioboost<-function(train_model,data){
   data_imputed<-imputed.cardioboost(data)

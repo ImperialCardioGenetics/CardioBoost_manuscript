@@ -23,7 +23,7 @@ load("../../../data/cardiomyopathy/ml/bmr_rf.RData")
 load("../../../data/cardiomyopathy/ml/bmr_xgboost.RData")
 load("../../../data/cardiomyopathy/ml/bmr_bartMachine.RData")
 load("../../../data/cardiomyopathy/ml/bmr_gbm.RData")
-load("../../../data/cardiomyopathy/ml/bmr_ada_v2.RData")
+load("../../../data/cardiomyopathy/ml/bmr_ada.RData")
 load("../../../data/cardiomyopathy/ml/bmr_svm_RBF.RData")
 load("../../../data/cardiomyopathy/ml/bmr_knn.RData")
 ```
@@ -62,7 +62,7 @@ p_knn<-generate_prob_dataframe("KNN",pred_knn)
 #the index of the rows in train_scaled
 scaled_row<-pred_cart$data$id
 #the index of the rows in the train_imputed
-imputed_row<-(rownames(train_scaled[scaled_row,]))
+imputed_row<-match(train_scaled[scaled_row,]$key,train_imputed$key)
 
 mcap_prob<-train_imputed[imputed_row,"MCAP"]
 revel_prob<-train_imputed[imputed_row,"REVEL"]

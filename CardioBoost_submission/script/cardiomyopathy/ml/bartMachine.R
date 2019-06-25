@@ -1,3 +1,5 @@
+#Attention: Try to use parallel mode otherwise this script may take a few days to finish
+
 setwd("./")
 rm(list = ls())
 options(java.parameters = "-Xmx20g")

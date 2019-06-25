@@ -16,27 +16,23 @@ library(pROC)
 library(cowplot)
 library(precrec)
 library(PRROC)
+library(ada)
 setwd("./")
 source("../../src/preprocess_test.R")
 source("../../src/permutation_test.R")
+source("../../src/predict.R")
 
 load("../../../data/cardiomyopathy/ml/train_ada.RData")
 load("../../../data/cardiomyopathy/preprocess.RData")
-load("../../../data/cardiomyopathy/prediction/cm_prediction.RData")
 load("../../../data/cardiomyopathy/cm_holdout_test.RData")
-
 
 ```
 
-
 ```{r, include=FALSE}
 ##Prediction
-test<-test[which(is.element(test$key,cm_prediction$key)==TRUE),]
-test$pathogenicity<-cm_prediction[match(test$key,cm_prediction$key),]$pathogenicity
-test$MCAP<-cm_prediction[match(test$key,cm_prediction$key),]$MCAP
-test$REVEL<-cm_prediction[match(test$key,cm_prediction$key),]$REVEL
+test_prediction<-predict.cardioboost(train_ada,test)
 
-test_prediction<-subset(test,select=c(pathogenic,pathogenicity,MCAP,REVEL))
+test_prediction<-subset(test_prediction,select=c(pathogenic,pathogenicity,MCAP,REVEL))
 ```
 
 ## Result
@@ -61,7 +57,6 @@ prob_plot<-function(p_data,name){
   return(g)
 }
 plot_grid(prob_plot(p_ada,"CardioBoost"),prob_plot(p_mcap,"M-CAP"),prob_plot(p_revel,"REVEL"),ncol = 3)
-
 
 ```
 
@@ -114,7 +109,7 @@ Non_clin<-c(nrow(subset(test_prediction,pathogenicity>1-th & pathogenicity<th))/
 
 
 library(data.table)
-clin_result<-data.frame(Classifier=Classifier,TPR=round(TPR*100,1),PPV=round(PPV*100,1),FPR=round(FPR*100,1),TNR=round(TNR*100,1),NPV=round(NPV*100,1),FNR=round(FNR*100,1),Pro_Clin=round(clin*100,1),Acc_clin=round(Acc_clin*100,1),Pro_Acc=round(Acc*100,1),Pro_indeterminate=round(Non_clin*100,1))
+clin_result<-data.frame(Classifier=Classifier,Overall_Accuracy=round(Acc*100,1),Proportion_Clinically_Actionable=round(clin*100,1),Accuracy_Clinical_Actionable=round(Acc_clin*100,1),Proportion_indeterminate_classification=round(Non_clin*100,1),TPR=round(TPR*100,1),PPV=round(PPV*100,1),FPR=round(FPR*100,1),TNR=round(TNR*100,1),NPV=round(NPV*100,1),FNR=round(FNR*100,1))
 t_clin_result<-transpose(clin_result)
 rownames(t_clin_result)<-colnames(clin_result)
 colnames(t_clin_result)<-rownames(clin_result)

@@ -16,31 +16,10 @@ require(dplyr)
 require(ggplot2)
 set.seed(1)
 setwd("./")
-load("../../../data/arrhythmia/arm_hvol.RData")
-load("../../../data/arrhythmia/arm_clinvar.RData")
-
-overlap_key<-intersect(arm_clinvar[which(arm_clinvar$pathogenic==1),]$key,arm_hvol$key)
 
 
-#exclude the variant that has conflicting intepretation in Brugada and LQTS
-arm_clinvar<-subset(arm_clinvar,HGVSc!="ENST00000333535.4:c.5455G>A")
+load("../../../data/arrhythmia/arm_raw_training.RData")
 
-arm_clinvar<-subset(arm_clinvar,!is.element(key,overlap_key))
-arm_hvol<-subset(arm_hvol,!is.element(key,overlap_key))
-
-numeric_column<-function(data,column){
-data[,column]<-as.numeric(as.character(data[,column]))
-}
-
-factor_column<-c("SIFT_score","Polyphen2_HDIV_score","Polyphen2_HVAR_score","LRT_score","MutationAssessor_score","FATHMM_score","PROVEAN_score","MCAP","PARASCOREzSCORE")
-
-arm_clinvar[,factor_column]<-sapply(factor_column,function(x){numeric_column(arm_clinvar,x)})
-
-character_column<-c("SIFT_score","LRT_score","FATHMM_score","PROVEAN_score","MCAP","PARASCOREzSCORE")
-arm_hvol[,character_column]<-sapply(character_column,function(x){numeric_column(arm_hvol,x)})
-
-
-train<-rbind(arm_clinvar,arm_hvol)  
 train<-subset(train,(gnomAD_AF<=0.001 | is.na(gnomAD_AF)))
 #length(which(train$gnomAD_AF==0))
 train<-train[-(which(train$gnomAD_AF==0)),]
@@ -50,25 +29,18 @@ exclude_gene<-c(exclude_gene,"KCNE2","KCNJ5","AKAP9","SCN4B","SNTA1")
 
 train<-subset(train,!is.element(gene,exclude_gene))
 
-
-
 train<-train[!duplicated(train$key),]
 
-train<-subset(train,select=-c(integrated_confidence_value,Eigen_coding_or_noncoding))
 train[train=="."] <- NA
-
-
-
 
 raw_train<-train
 table(raw_train$pathogenic)
 
-
-test<-rbind(sample_n(train[which(train$pathogenic==1),],length(which(train$pathogenic==1))*1/3),
-                     sample_n(train[which(train$pathogenic==0),],length(which(train$pathogenic==0))*1/3))
+test<-rbind(sample_n(raw_train[which(raw_train$pathogenic==1),],length(which(raw_train$pathogenic==1))*1/3),
+                     sample_n(raw_train[which(raw_train$pathogenic==0),],length(which(raw_train$pathogenic==0))*1/3))
 test_id<-row.names(test)
 
-train<-train[!rownames(train) %in% test_id,]
+train<-subset(raw_train,!is.element(key,test$key))
 table(train$pathogenic,train$gene)
 table(train$pathogenic)
 table(test$pathogenic,test$gene)
@@ -79,13 +51,10 @@ save(train,file="../../../data/arrhythmia/arm_train.RData")
 
 ```
 
-
-
 ## Preprocess the data
 
  - Conditional Mean imputation for missing values
  - Normalization for the features in the training data set and record the corresponding mean and variation
-
 
 ```{r}
 

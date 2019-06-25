@@ -15,25 +15,14 @@ setwd("./")
 rm(list=ls())
 require(dplyr)
 getwd()
-load("../../../data/cardiomyopathy/cm_cohort.RData")
-load("../../../data/cardiomyopathy/hvol_cm.RData")
 
 
-#check whether there are intersection between hvol variants and icc mutations 
-#exclude the intersections one with conflicting interpretations (hvol variants present in pathogenic data sets)
-overlap_key<-intersect(cohort[which(cohort$pathogenic==1),]$key,hvol_cm$key)
-cohort<-subset(cohort,!is.element(key,overlap_key))
-hvol_cm<-subset(hvol_cm,!is.element(key,overlap_key))
-
-train<-rbind(cohort,hvol_cm)
-
-
-
+load("../../../data/cardiomyopathy/cm_raw_training.RData")
 
 #only consider rare variants
 train<-subset(train,(gnomAD_AF<=0.001 | is.na(gnomAD_AF)))
 
-#exclude genes that only have benign variants  
+#exclude genes that only variants in hvol 
 exclude_gene<-setdiff(unique(train[which(train$pathogenic==0),]$gene),unique(train[which(train$pathogenic==1),]$gene))
 train<-subset(train,!is.element(gene,exclude_gene))
 
@@ -43,8 +32,7 @@ train<-subset(train,!is.element(gene,exclude_gene))
 train<-train[!duplicated(train),]
 train<-train[!duplicated(train$key),]
 
-#remove unwanted columns and change the value type into numeric
-train<-subset(train,select=-c(integrated_confidence_value,Eigen_coding_or_noncoding))
+#change the value type into numeric
 train[train=="."] <- NA
 
 train[,11:42]<-data.matrix(train[,11:42])
@@ -62,7 +50,7 @@ test<-rbind(sample_n(train[which(train$pathogenic==1),],length(which(train$patho
             sample_n(train[which(train$pathogenic==0),],length(which(train$pathogenic==0))*1/3))
 test_id<-row.names(test)
 
-train<-train[!rownames(train) %in% test_id,]
+train<-train[which(is.element(train$key,test$key)!=TRUE),]
 
 save(train,file="../../../data/cardiomyopathy/cm_train.RData")
 save(test,file="../../../data/cardiomyopathy/cm_holdout_test.RData")

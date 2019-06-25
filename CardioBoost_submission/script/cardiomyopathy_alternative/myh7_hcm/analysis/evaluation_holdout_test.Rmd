@@ -17,14 +17,13 @@ library(cowplot)
 library(precrec)
 library(PRROC)
 setwd("./")
-source("../../src/preprocess_test.R")
-source("../../src/permutation_test.R")
-source("../../src/predict.R")
+source("../../../src/preprocess_test.R")
+source("../../../src/permutation_test.R")
+source("../../../src/predict.R")
 
-load("../../../data/myh7_hcm/ml/train_ada.RData")
-load("../../../data/myh7_hcm/preprocess.RData")
-load("../../../data/myh7_hcm/prediction/cm_prediction.RData")
-load("../../../data/myh7_hcm/cm_holdout_test.RData")
+load("../../../../data/cardiomyopathy_alternative/myh7_hcm/ml/train_ada.RData")
+load("../../../../data/cardiomyopathy_alternative/myh7_hcm/preprocess.RData")
+load("../../../../data/cardiomyopathy_alternative/myh7_hcm/myh7_hcm_holdout_test.RData")
 
 
 ```

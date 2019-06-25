@@ -1,0 +1,175 @@
+---
+title: "Evaluation on additional test data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+ 
+```{r}
+rm(list=ls())
+library(dplyr)
+library(mlr)
+set.seed(123)
+setwd("./")
+
+source("../../src/permutation_test.R")
+load("../../../data/arrhythmia/prediction/arm_prediction.RData")
+load("../../../data/arrhythmia/preprocess.RData")
+```
+
+
+### Pathogenic test set 1 (Oxford): True positive rate at P>0.9
+```{r}
+#get the prediction on test variants
+load("../../../data/arrhythmia/arm_additional_patho_test.RData")
+
+subset="Oxford"
+print(paste(subset,":CardioBoost","MCAP","REVEL",sep=" "))
+arm_patho_test_subset<-subset(arm_patho_test,source==subset)
+nrow(arm_patho_test_subset)
+print(round(c(measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$pathogenicity>=0.90,1,0),1),
+measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$MCAP>=0.90,1,0),1),
+measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$REVEL>=0.90,1,0),1))*100,1))
+
+data_set<-function(test,classifer){
+  data<-subset(arm_patho_test,source==test)
+  data<-data[,c("pathogenic",classifer)]
+  colnames(data)<-c("class","prob_pathogenic")
+  data
+}
+
+tpr.f<-function(d){
+  data<-d
+  measureTPR(data$class,ifelse(data$prob_pathogenic>=0.90,1,0),1)
+}
+
+p_ada<-data_set("Oxford","pathogenicity")
+p_mcap<-data_set("Oxford","MCAP")
+
+permutation(p_ada,p_mcap,fun=tpr.f,n=10000)
+
+```
+
+
+### Pathogenic test set 1 (Oxford): True positive rate at P>0.95
+```{r}
+
+subset="Oxford"
+print(paste(subset,":CardioBoost","MCAP","REVEL",sep=" "))
+arm_patho_test_subset<-subset(arm_patho_test,source==subset)
+nrow(arm_patho_test_subset)
+print(round(c(measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$pathogenicity>=0.95,1,0),1),
+measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$MCAP>=0.95,1,0),1),
+measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$REVEL>=0.95,1,0),1))*100,1))
+
+data_set<-function(test,classifer){
+  data<-subset(arm_patho_test,source==test)
+  data<-data[,c("pathogenic",classifer)]
+  colnames(data)<-c("class","prob_pathogenic")
+  data
+}
+
+tpr.f<-function(d){
+  data<-d
+  measureTPR(data$class,ifelse(data$prob_pathogenic>=0.95,1,0),1)
+}
+
+p_ada<-data_set("Oxford","pathogenicity")
+p_mcap<-data_set("Oxford","MCAP")
+
+permutation(p_ada,p_mcap,fun=tpr.f,n=10000)
+```
+
+
+### Pathogenic test set 2 (HGMD): true pathogenic rate at P>0.9
+```{r}
+subset="HGMD"
+print(paste(subset,":CardioBoost","MCAP","REVEL",sep=" "))
+arm_patho_test_subset<-subset(arm_patho_test,source==subset)
+nrow(arm_patho_test_subset)
+print(round(c(measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$pathogenicity>=0.90,1,0),1),
+measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$MCAP>=0.90,1,0),1),
+measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$REVEL>=0.90,1,0),1))*100,1))
+
+p_ada<-data_set("HGMD","pathogenicity")
+p_mcap<-data_set("HGMD","MCAP")
+
+permutation(p_ada,p_mcap,fun=tpr.f,n=10000)
+
+```
+### Pathogenic test set 2 (HGMD): true pathogenic rate at P>0.95
+```{r}
+subset="HGMD"
+print(paste(subset,":CardioBoost","MCAP","REVEL",sep=" "))
+arm_patho_test_subset<-subset(arm_patho_test,source==subset)
+nrow(arm_patho_test_subset)
+print(round(c(measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$pathogenicity>=0.95,1,0),1),
+measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$MCAP>=0.95,1,0),1),
+measureTPR(arm_patho_test_subset$pathogenic,ifelse(arm_patho_test_subset$REVEL>=0.95,1,0),1))*100,1))
+
+p_ada<-data_set("HGMD","pathogenicity")
+p_mcap<-data_set("HGMD","MCAP")
+
+permutation(p_ada,p_mcap,fun=tpr.f,n=10000)
+
+```
+
+
+### Benign test set 1 (gnomAD_subset: excluding the one already seen in the ExAC): true negative rate at P<0.1
+```{r}
+load("../../../data/arrhythmia/arm_additional_test_benign.RData")
+
+round(c(measureTNR(arm_gnomad_rare_noexac$pathogenic,ifelse(arm_gnomad_rare_noexac$pathogenicity>=0.10,1,0),0),
+measureTNR(arm_gnomad_rare_noexac$pathogenic,ifelse(arm_gnomad_rare_noexac$MCAP>=0.10,1,0),0),
+measureTNR(arm_gnomad_rare_noexac$pathogenic,ifelse(arm_gnomad_rare_noexac$REVEL>=0.10,1,0),0))*100,1)
+
+nrow(arm_gnomad_rare_noexac)
+
+data_set<-function(classifer){
+  data<-arm_gnomad_rare_noexac[,c("pathogenic",classifer)]
+  colnames(data)<-c("class","prob_pathogenic")
+  data
+}
+
+tnr.f_0.1<-function(d){
+  data<-d
+  measureTNR(data$class,ifelse(data$prob_pathogenic>=0.10,1,0),0)
+}
+
+p_ada<-data_set("pathogenicity")
+p_mcap<-data_set("MCAP")
+
+permutation(p_ada,p_mcap,fun=tnr.f_0.1,n=10000)
+
+
+
+```
+
+### Benign test set 1 (gnomAD_subset: excluding the one already seen in the ExAC): true negative rate at P<0.05
+```{r}
+
+round(c(measureTNR(arm_gnomad_rare_noexac$pathogenic,ifelse(arm_gnomad_rare_noexac$pathogenicity>=0.05,1,0),0),
+measureTNR(arm_gnomad_rare_noexac$pathogenic,ifelse(arm_gnomad_rare_noexac$MCAP>=0.05,1,0),0),
+measureTNR(arm_gnomad_rare_noexac$pathogenic,ifelse(arm_gnomad_rare_noexac$REVEL>=0.05,1,0),0))*100,1)
+
+nrow(arm_gnomad_rare_noexac)
+
+data_set<-function(classifer){
+  data<-arm_gnomad_rare_noexac[,c("pathogenic",classifer)]
+  colnames(data)<-c("class","prob_pathogenic")
+  data
+}
+
+tnr.f_0.05<-function(d){
+  data<-d
+  measureTNR(data$class,ifelse(data$prob_pathogenic>=0.05,1,0),0)
+}
+
+p_ada<-data_set("pathogenicity")
+p_mcap<-data_set("MCAP")
+
+permutation(p_ada,p_mcap,fun=tnr.f_0.05,n=10000)
+```

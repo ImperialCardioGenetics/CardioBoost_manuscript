@@ -22,4 +22,4 @@ meas = list(mmce, brier,auc,fdr,tpr,tnr,ppv,mcc,self_measure)
 tuned_learners_full<-list(ada_tuned)
 
 bmr_ada_full<- benchmark(tuned_learners_full,task,outer,meas)
-save(bmr_ada_full,file="../../../data/cardiomyopathy/ml/bmr_ada_v2.RData")
+save(bmr_ada_full,file="../../../data/cardiomyopathy/ml/bmr_ada.RData")

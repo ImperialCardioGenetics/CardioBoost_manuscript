@@ -1,9 +1,0 @@
-Rscript gbm.R &
-Rscript bartMachine.R &
-Rscript ada.R &
-Rscript knn.R &
-Rscript rf.R &
-Rscript cvglmnet.R &
-Rscript svm_RBF.R &
-Rscript xgboost.R &
-Rscript cart.R &

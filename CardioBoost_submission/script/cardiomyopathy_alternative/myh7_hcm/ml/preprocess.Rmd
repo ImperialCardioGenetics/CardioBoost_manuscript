@@ -14,79 +14,27 @@ set.seed(4)
 setwd("./")
 rm(list=ls())
 require(dplyr)
-getwd()
-load("../../../data/myh7_hcm/cm_hcm_cohort.RData")
-load("../../../data/myh7_hcm/hvol_cm.RData")
-load("../../../data/myh7_hcm/cm_dcm_cohort.RData")
 
-
-#check whether there are intersection between hvol variants and icc mutations 
-#exclude the intersections one with conflicting interpretations (hvol variants present in pathogenic data sets
-myh7_cohort<-subset(hcm_cohort,gene=="MYH7")
-overlap_key<-intersect(myh7_cohort[which(myh7_cohort$pathogenic==1),]$key,hvol_cm$key)
-myh7_cohort<-subset(myh7_cohort,!is.element(key,overlap_key))
-hvol_cm<-subset(hvol_cm,!is.element(key,overlap_key))
-myh7_dcm<-subset(dcm_cohort,gene=="MYH7" & pathogenic==1)
-myh7_dcm<-subset(dcm_cohort,!is.element(key,myh7_cohort[which(myh7_cohort$pathogenic==1),]$key))
-myh7_dcm$pathogenic=0
-
-train<-rbind(myh7_cohort,hvol_cm,myh7_dcm)  
-
-#only consider rare variants
-train<-subset(train,(gnomAD_AF<=0.001 | is.na(gnomAD_AF)))
-
-#exclude genes that only variants in hvol 
-exclude_gene<-setdiff(unique(train[which(train$pathogenic==0),]$gene),unique(train[which(train$pathogenic==1),]$gene))
-train<-subset(train,!is.element(gene,exclude_gene))
-
-
-
-#remove duplicated rows
-train<-train[!duplicated(train),]
-train<-train[!duplicated(train$key),]
-
-#remove unwanted columns and change the value type into numeric
-train<-subset(train,select=-c(integrated_confidence_value,Eigen_coding_or_noncoding))
-train[train=="."] <- NA
-
-train[,11:42]<-data.matrix(train[,11:42])
-train[,11:42]<-data.frame(train[,11:42])
-train$SIFT_score=as.numeric(train$SIFT_score)
-train$Polyphen2_HDIV_score<-as.numeric(train$Polyphen2_HDIV_score)
-train$Polyphen2_HVAR_score<-as.numeric(train$Polyphen2_HVAR_score)
-train$LRT_score=as.numeric(train$LRT_score)
-train$MCAP=as.numeric(train$MCAP)
-train$SiPhy_29way_logOdds=as.numeric(train$SiPhy_29way_logOdds)
-
+load("../../../../data/cardiomyopathy_alternative/myh7_hcm/myh7_hcm_raw_train.RData")
 
 #split the data set into 2/3 for training and 1/3 for testing and remain the class distribution 
 test<-rbind(sample_n(train[which(train$pathogenic==1),],length(which(train$pathogenic==1))*1/3),
             sample_n(train[which(train$pathogenic==0),],length(which(train$pathogenic==0))*1/3))
 test_id<-row.names(test)
 
-train<-train[!rownames(train) %in% test_id,]
+train<-subset(train,!is.element(key,test$key))
+train_gene<-unique(train[which(train$pathogenic==1),]$gene)
+train<-subset(train,is.element(gene,train_gene))
+test<-subset(test,is.element(gene,train_gene))
+
+save(train,file="../../../../data/cardiomyopathy_alternative/myh7_hcm/myh7_hcm_train.RData")
+save(test,file="../../../../data/cardiomyopathy_alternative/myh7_hcm/myh7_hcm_holdout_test.RData")
 
 
-train_pathogenic<-subset(train,pathogenic==1)
-train_benign<-subset(train,pathogenic==0)
-train<-rbind(train_pathogenic,train_benign)
-train<-subset(train,gene=="MYH7")
-
-
-test_pathogenic<-subset(test,pathogenic==1)
-test_benign<-subset(test,pathogenic==0)
-test<-rbind(test_pathogenic,test_benign)
-test<-subset(test,gene=="MYH7")
-
-save(train,file="../../../data/myh7_hcm/myh7_train.RData")
-save(test,file="../../../data/myh7_hcm/myh7_holdout_test.RData")
-
-#Supplementary Table 3
 table(train$pathogenic)
 table(test$pathogenic)
 table(rbind(train,test)$pathogenic)
 
-#Supplementary Table 4
 table(train$pathogenic,train$gene)
 table(test$pathogenic,test$gene)
 ```
@@ -102,7 +50,7 @@ table(test$pathogenic,test$gene)
 
 #######
 # Imputation:
-# impute_mean: mean vector used to replace the missing values from columns 14:39
+# impute_mean: mean vector used to replace the missing values from columns 14:38
 # with function mean_imputation
 # 
 # PARASCOREzSCORE: missing value replaced as 0 and add additional dummy variable PARASCORE_exist to denote the existence of PARASCOREzSCORE
@@ -111,9 +59,9 @@ table(test$pathogenic,test$gene)
 # 
 #######
 
-train<-subset(train,select=-c(LRT_score))
+
 train_imputed<-train
-##For Column 14 to 39, missing is completely random. the missing values are replaced with conditional mean. 
+##For Column 14 to 38, missing is completely random. the missing values are replaced with conditional mean. 
 ##Mean imputation
 impute_features<-colnames(train_imputed[,14:38])
 
@@ -143,7 +91,7 @@ train_imputed$MPC[is.na(train_imputed$MPC)]<--1
 
 #######
 # Normalization:
-# normalize Columns 11-39 and save the mean and std used for normalization
+# normalize Columns 11-38 and save the mean and std used for normalization
 # with function z_normalization
 #######
 
@@ -181,7 +129,7 @@ disease_gene<-unique(train_scaled$gene)
 #save output to two RData files:
 #preprocess: save mean and std for feature columns and functions in order to impute and normalize new samples 
 #train_scaled: training table including variant information  plus key (i.e., short form of genomic coordinate "1_XXXXXXXXXXX_A_G")
-save(impute_features,impute_mean,scale_mean,scale_std,mean_imputation,z_normalization,feature_column,disease_gene,train_imputed,file="../../../data/myh7_hcm/preprocess.RData")
-save(train_scaled,file="../../../data/myh7_hcm/train_scaled.RData")
+save(impute_features,impute_mean,scale_mean,scale_std,mean_imputation,z_normalization,feature_column,disease_gene,train_imputed,file="../../../../data/cardiomyopathy_alternative/myh7_hcm/preprocess.RData")
+save(train_scaled,file="../../../../data/cardiomyopathy_alternative/myh7_hcm/train_scaled.RData")
 
 ```

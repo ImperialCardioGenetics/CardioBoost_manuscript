@@ -12,7 +12,7 @@ setwd("./")
 source("../../src/ef_ci.R")
 
 load("../../../data/cardiomyopathy/share_variant_count.RData")
-load("../../../data/cardiomyopathy/prediction/cm_prediction.RData")
+load("../../../data/cardiomyopathy/prediction/cm_prediction_full.RData")
 
 
 patient_number<-5665
