@@ -1,0 +1,179 @@
+---
+title: "evaluation_unseen_seen"
+author: "Xiaolei"
+date: "14/02/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ada)
+load("../../../data/cardiomyopathy/preprocess.RData")
+source("../../src/preprocess_test.R")
+source("../../src/predict.R")
+load("../../../data/cardiomyopathy/ml/train_ada.RData")
+load("../../../data/cardiomyopathy/cm_holdout_test.RData")
+library(dplyr)
+test<-predict.cardioboost(train_ada,test)
+
+```
+
+### The performance on unseen data
+
+```{r}
+#Filter the variants already seen in HGMD 201502
+
+load("../../../data/cardiomyopathy/hgmd_dm.RData")
+
+hgmd_dm$key<-paste(hgmd_dm$CHROM,hgmd_dm$POS,hgmd_dm$REF,hgmd_dm$ALT,sep="_")
+
+
+##############################################################################
+#number of variants unseen in test data before
+
+hgmd_key<-intersect(hgmd_dm[,'key'],test[,'key'])
+
+rownames(test)<-1:nrow(test)
+test_noHGMD<-subset(test,!is.element(key,hgmd_key))
+test_noHGMD_noExAC<-subset(test_noHGMD,is.na(AF_Adj))
+table(test_noHGMD_noExAC$pathogenic)
+filtered_row<-rownames(test_noHGMD_noExAC)
+test_filtered<-test[filtered_row,]
+test_used<-subset(test,!is.element(key,test_filtered$key))
+
+#number of variants seen in test data before
+table(test_used$pathogenic)
+
+#number of test variants seen in HGMD before are actually benign 
+table(subset(test,is.element(key,hgmd_key))$pathogenic)
+
+#############################################################################
+#number of variants unseen in training data before
+hgmd_key<-intersect(hgmd_dm[,'key'],train_imputed$key)
+
+
+train_filtered<-subset(subset(train_imputed,!is.element(key,hgmd_key)),is.na(AF_Adj))
+table(train_filtered$pathogenic)
+
+
+#number of variants seen in training data before
+train_used<-subset(train_imputed,!is.element(key,train_filtered$key))
+table(train_used$pathogenic)
+
+
+#number of variants seen in HGMD before but label as benign in our data set
+table(subset(train_imputed,is.element(key,hgmd_key))$pathogenic)
+
+```
+
+
+
+
+```{r}
+library(PRROC)
+prauc<-c(pr.curve(test_filtered[which(test_filtered$pathogenic==1),]$pathogenicity,test_filtered[which(test_filtered$pathogenic==0),]$pathogenicity, curve = F)$auc.integral,  pr.curve(test_filtered[which(test_filtered$pathogenic==1),]$MCAP,test_filtered[which(test_filtered$pathogenic==0),]$MCAP, curve = F)$auc.integral, pr.curve(test_filtered[which(test_filtered$pathogenic==1),]$REVEL,test_filtered[which(test_filtered$pathogenic==0),]$REVEL, curve = F)$auc.integral)
+
+rocauc<-c(measureAUC(test_filtered$pathogenicity,test_filtered$pathogenic,0,1),measureAUC(test_filtered$MCAP,test_filtered$pathogenic,0,1),measureAUC(test_filtered$REVEL,test_filtered$pathogenic,0,1))
+
+brier<-c(measureBrier(test_filtered$pathogenicity,test_filtered$pathogenic,0,1),measureBrier(test_filtered$MCAP,test_filtered$pathogenic,0,1),measureBrier(test_filtered$REVEL,test_filtered$pathogenic,0,1))
+
+
+tpr<-c(measureTPR(test_filtered$pathogenic,ifelse(test_filtered$pathogenicity>=0.9,1,0),1),measureTPR(test_filtered$pathogenic,ifelse(test_filtered$MCAP>=0.9,1,0),1),measureTPR(test_filtered$pathogenic,ifelse(test_filtered$REVEL>=0.9,1,0),1))
+
+ppv<-c(measurePPV(test_filtered$pathogenic,ifelse(test_filtered$pathogenicity>=0.9,1,0),1),measurePPV(test_filtered$pathogenic,ifelse(test_filtered$MCAP>=0.9,1,0),1),measurePPV(test_filtered$pathogenic,ifelse(test_filtered$REVEL>=0.9,1,0),1))
+
+fpr<-c(measureFPR(test_filtered$pathogenic,ifelse(test_filtered$pathogenicity>=0.9,1,0),0,1),measureFPR(test_filtered$pathogenic,ifelse(test_filtered$MCAP>=0.9,1,0),0,1),measureFPR(test_filtered$pathogenic,ifelse(test_filtered$REVEL>=0.9,1,0),0,1))
+
+
+tnr<-c(measureTNR(test_filtered$pathogenic,ifelse(test_filtered$pathogenicity<=0.1,0,1),0),measureTNR(test_filtered$pathogenic,ifelse(test_filtered$MCAP<=0.1,0,1),0),measureTNR(test_filtered$pathogenic,ifelse(test_filtered$REVEL<=0.1,0,1),0))
+
+npv<-c(measureNPV(test_filtered$pathogenic,ifelse(test_filtered$pathogenicity<=0.1,0,1),0),measureNPV(test_filtered$pathogenic,ifelse(test_filtered$MCAP<=0.1,0,1),0),measureNPV(test_filtered$pathogenic,ifelse(test_filtered$REVEL<=0.1,0,1),0))
+
+fnr<-c(measureFNR(test_filtered$pathogenic,ifelse(test_filtered$pathogenicity<=0.1,0,1),0,1),measureFNR(test_filtered$pathogenic,ifelse(test_filtered$MCAP<=0.1,0,1),0,1),measureFNR(test_filtered$pathogenic,ifelse(test_filtered$REVEL<=0.1,0,1),0,1))
+
+
+
+
+#the proportion of accurately classified variants
+
+acc_clin<-c(sum(c(test_filtered[which(test_filtered$pathogenic==1),]$pathogenicity>=0.9,test_filtered[which(test_filtered$pathogenic==0),]$pathogenicity<=0.1))/sum(test_filtered$pathogenicity<=0.1|test_filtered$pathogenicity>=0.9),sum(c(test_filtered[which(test_filtered$pathogenic==1),]$MCAP>=0.9,test_filtered[which(test_filtered$pathogenic==0),]$MCAP<=0.1))/sum(test_filtered$MCAP<=0.1|test_filtered$MCAP>=0.9),sum(c(test_filtered[which(test_filtered$pathogenic==1),]$REVEL>=0.9,test_filtered[which(test_filtered$pathogenic==0),]$REVEL<=0.1))/sum(test_filtered$REVEL<=0.1|test_filtered$REVEL>=0.9))
+
+prop_acc<-c(sum(c(test_filtered[which(test_filtered$pathogenic==1),]$pathogenicity>=0.9,test_filtered[which(test_filtered$pathogenic==0),]$pathogenicity<=0.1))/nrow(test_filtered),sum(c(test_filtered[which(test_filtered$pathogenic==1),]$MCAP>=0.9,test_filtered[which(test_filtered$pathogenic==0),]$MCAP<=0.1))/nrow(test_filtered),sum(c(test_filtered[which(test_filtered$pathogenic==1),]$REVEL>=0.9,test_filtered[which(test_filtered$pathogenic==0),]$REVEL<=0.1))/nrow(test_filtered))
+
+clin_indeterminate<-c(sum(test_filtered$pathogenicity>0.1 & test_filtered$pathogenicity<0.9)/nrow(test_filtered),sum(test_filtered$MCAP>0.1 & test_filtered$MCAP<0.9)/nrow(test_filtered),sum(test_filtered$REVEL>0.1 & test_filtered$REVEL<0.9)/nrow(test_filtered))
+
+prop_clin<-1-clin_indeterminate
+
+
+
+unseen<-rbind(prauc,rocauc,brier,tpr,ppv,fpr,tnr,npv,fnr,prop_clin,acc_clin,prop_acc,clin_indeterminate)
+colnames(unseen)<-c("CardioBoost","M-CAP","REVEL")
+unseen<-round(unseen*100,1)
+unseen
+
+```
+
+### The performance on seen data
+```{r}
+############################################################################################
+table(test_used$pathogenic)
+
+prauc<-c(pr.curve(test_used[which(test_used$pathogenic==1),]$pathogenicity,test_used[which(test_used$pathogenic==0),]$pathogenicity, curve = F)$auc.integral, pr.curve(test_used[which(test_used$pathogenic==1),]$MCAP,test_used[which(test_used$pathogenic==0),]$MCAP, curve = F)$auc.integral, pr.curve(test_used[which(test_used$pathogenic==1),]$REVEL,test_used[which(test_used$pathogenic==0),]$REVEL, curve = F)$auc.integral)
+
+
+
+rocauc<-c(measureAUC(test_used$pathogenicity,test_used$pathogenic,0,1),measureAUC(test_used$MCAP,test_used$pathogenic,0,1),measureAUC(test_used$REVEL,test_used$pathogenic,0,1))
+
+brier<-c(measureBrier(test_used$pathogenicity,test_used$pathogenic,0,1),measureBrier(test_used$MCAP,test_used$pathogenic,0,1),measureBrier(test_used$REVEL,test_used$pathogenic,0,1))
+
+
+tpr<-c(measureTPR(test_used$pathogenic,ifelse(test_used$pathogenicity>=0.9,1,0),1),measureTPR(test_used$pathogenic,ifelse(test_used$MCAP>=0.9,1,0),1),measureTPR(test_used$pathogenic,ifelse(test_used$REVEL>=0.9,1,0),1))
+
+ppv<-c(measurePPV(test_used$pathogenic,ifelse(test_used$pathogenicity>=0.9,1,0),1),measurePPV(test_used$pathogenic,ifelse(test_used$MCAP>=0.9,1,0),1),measurePPV(test_used$pathogenic,ifelse(test_used$REVEL>=0.9,1,0),1))
+
+fpr<-c(measureFPR(test_used$pathogenic,ifelse(test_used$pathogenicity>=0.9,1,0),0,1),measureFPR(test_used$pathogenic,ifelse(test_used$MCAP>=0.9,1,0),0,1),measureFPR(test_used$pathogenic,ifelse(test_used$REVEL>=0.9,1,0),0,1))
+
+tnr<-c(measureTNR(test_used$pathogenic,ifelse(test_used$pathogenicity<=0.1,0,1),0),measureTNR(test_used$pathogenic,ifelse(test_used$MCAP<=0.1,0,1),0),measureTNR(test_used$pathogenic,ifelse(test_used$REVEL<=0.1,0,1),0))
+
+npv<-c(measureNPV(test_used$pathogenic,ifelse(test_used$pathogenicity<=0.1,0,1),0),measureNPV(test_used$pathogenic,ifelse(test_used$MCAP<=0.1,0,1),0),measureNPV(test_used$pathogenic,ifelse(test_used$REVEL<=0.1,0,1),0))
+
+fnr<-c(measureFNR(test_used$pathogenic,ifelse(test_used$pathogenicity<=0.1,0,1),0,1),measureFNR(test_used$pathogenic,ifelse(test_used$MCAP<=0.1,0,1),0,1),measureFNR(test_used$pathogenic,ifelse(test_used$REVEL<=0.1,0,1),0,1))
+
+
+
+
+#the proportion of accurately classified variants
+
+acc_clin<-c(sum(c(test_used[which(test_used$pathogenic==1),]$pathogenicity>=0.9,test_used[which(test_used$pathogenic==0),]$pathogenicity<=0.1))/sum(test_used$pathogenicity<=0.1|test_used$pathogenicity>=0.9),sum(c(test_used[which(test_used$pathogenic==1),]$MCAP>=0.9,test_used[which(test_used$pathogenic==0),]$MCAP<=0.1))/sum(test_used$MCAP<=0.1|test_used$MCAP>=0.9),sum(c(test_used[which(test_used$pathogenic==1),]$REVEL>=0.9,test_used[which(test_used$pathogenic==0),]$REVEL<=0.1))/sum(test_used$REVEL<=0.1|test_used$REVEL>=0.9))
+
+prop_acc<-c(sum(c(test_used[which(test_used$pathogenic==1),]$pathogenicity>=0.9,test_used[which(test_used$pathogenic==0),]$pathogenicity<=0.1))/nrow(test_used),sum(c(test_used[which(test_used$pathogenic==1),]$MCAP>=0.9,test_used[which(test_used$pathogenic==0),]$MCAP<=0.1))/nrow(test_used),sum(c(test_used[which(test_used$pathogenic==1),]$REVEL>=0.9,test_used[which(test_used$pathogenic==0),]$REVEL<=0.1))/nrow(test_used))
+
+clin_indeterminate<-c(sum(test_used$pathogenicity>0.1 & test_used$pathogenicity<0.9)/nrow(test_used),sum(test_used$MCAP>0.1 & test_used$MCAP<0.9)/nrow(test_used),sum(test_used$REVEL>0.1 & test_used$REVEL<0.9)/nrow(test_used))
+
+prop_clin<-1-clin_indeterminate
+
+
+
+seen<-rbind(prauc,rocauc,brier,tpr,ppv,fpr,tnr,npv,fnr,prop_clin,acc_clin,prop_acc,clin_indeterminate)
+colnames(seen)<-c("CardioBoost","M-CAP","REVEL")
+seen<-round(seen*100,1)
+seen
+
+```
+
+### Test the significant difference on overall accuracies 
+
+```{r}
+source("../../src/permutation_test.R")
+th=0.9
+acc.f<-function(data){
+  (sum(data$pathogenicity[data$class==0]<=1-th)+sum(data$pathogenicity[data$class==1]>=th))/nrow(data)
+  
+}
+
+permutation(test_filtered,test_used,acc.f,n=10000)
+
+```

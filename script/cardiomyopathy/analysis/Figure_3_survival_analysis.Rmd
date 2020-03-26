@@ -1,0 +1,150 @@
+---
+title: "Suvival_Plot"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r prepare data, fig.height=10, fig.width=11, include=FALSE}
+library(survminer)
+library(survival)
+set.seed(1)
+rm(list=ls())
+
+sarc_gene<-c("ACTC1","MYBPC3","MYH7","MYL2","MYL3","TNNI3","TNNT2","TPM1")
+load("../../../data/cardiomyopathy/2019_share_outcome_genetics.RData")
+
+table(sarc_outcome$SHaRe)
+
+sarc_outcome$CardioBoost<-ifelse(sarc_outcome$pathogenicity<=0.1,"CardioBoost-Benign",ifelse(sarc_outcome$pathogenicity>=0.9,"CardioBoost-Pathogenic",ifelse(!is.na(sarc_outcome$pathogenicity),"CardioBoost-Unclassified","Genotype Negative")))
+sarc_outcome[which(is.na(sarc_outcome$pathogenicity)==TRUE),]$CardioBoost<-"Genotype Negative"
+table(sarc_outcome$CardioBoost)
+
+sarc_outcome$MCAP<-ifelse(sarc_outcome$MCAP<=0.1,"MCAP-Benign",ifelse(sarc_outcome$MCAP>=0.9,"MCAP-Pathogenic",ifelse(!is.na(sarc_outcome$MCAP),"MCAP-Unclassified","Genotype Negative")))
+sarc_outcome[which(is.na(sarc_outcome$MCAP)),]$MCAP<-"Genotype Negative"
+table(sarc_outcome$MCAP)
+
+sarc_outcome$REVEL<-ifelse(sarc_outcome$REVEL<=0.1,"REVEL-Benign",ifelse(sarc_outcome$REVEL>=0.9,"REVEL-Pathogenic","REVEL-Unclassified"))
+sarc_outcome[which(is.na(sarc_outcome$REVEL)),]$REVEL<-"Genotype Negative"
+table(sarc_outcome$REVEL)
+
+
+#CardioBoost
+data1<-sarc_outcome
+colnames(data1)[ncol(data1)]<-"Class"
+
+#SHaRe
+data2<-sarc_outcome
+data2$CardioBoost<-data2$SHaRe
+colnames(data2)[ncol(data2)]<-"Class"
+
+#MCAP
+data3<-sarc_outcome
+data3$CardioBoost<-data3$MCAP
+colnames(data3)[ncol(data3)]<-"Class"
+
+#REVEL
+data4<-sarc_outcome
+data4$CardioBoost<-data4$REVEL
+colnames(data4)[ncol(data4)]<-"Class"
+
+
+```
+
+
+## Figure 3a: KM-suvival plot for CardioBoost and SHaRe stratified groups
+
+
+```{r Figure 1a, fig.height=10, fig.width=10}
+
+gn<-subset(data1,Class=="Genotype Negative")
+data1<-subset(data1,Class!="Genotype Negative")
+data2<-subset(data2,Class!="Genotype Negative")
+data_CardioBoost_share<-rbind(data2,data1,gn)
+
+data_CardioBoost_share$Class<-factor(data_CardioBoost_share$Class,levels=c("Genotype Negative","CardioBoost-Pathogenic","CardioBoost-Unclassified","CardioBoost-Benign","SHaRe-PLP","SHaRe-VUS"))
+table(data_CardioBoost_share$Class)
+
+CardioBoost_share_fit<-survfit(Surv(age,Composite_Overall)~Class,data=data_CardioBoost_share)
+
+###The one generate survival curve
+ggsurvplot(CardioBoost_share_fit,combine = TRUE, pval = FALSE, censor=FALSE,break.time.by=10,
+           risk.table = TRUE,conf.int = FALSE,data = data_CardioBoost_share,
+           palette = c(rgb(0,114,178,max=255),rgb(213,94,0,max=255),rgb(0,158,115,max=255),rgb(230,159,0,max=255),rgb(100,100,223,max=255),rgb(240,228,66,max=255)),
+           #palette=c("steelblue2","red2","springgreen3","lightsteelblue1","lightsalmon1","palegreen"),
+           linetype=c("solid","solid","solid","solid","solid","solid"),
+           tables.height = 0.2,
+           tables.theme = theme_cleantable(),xlim=c(0,70),xlab="Age(years)",ylab="Proportion Free Of Overall Composite Endpoint(%)")
+
+
+ggsurvplot(CardioBoost_share_fit,combine = TRUE, pval = FALSE, censor=FALSE,break.time.by=10,
+          risk.table = "percentage",conf.int = FALSE,data = data_CardioBoost_share,
+           #palette=c("steelblue2","red2","springgreen3","lightsteelblue1","lightsalmon1","palegreen"),
+           #linetype=c("solid","solid","dotted","dotted","dotted","solid"),
+           tables.height = 0.2,
+          tables.theme = theme_cleantable(),xlim=c(0,70),xlab="Age(years)",ylab="Proportion Free Of Overall Composite Endpoint(%)")
+
+
+```
+
+## Figure 3b: Pairwise Statistical Comparison
+```{r pairwise test}
+pairwise_survdiff(Surv(age,Composite_Overall)~Class,
+                  data=data_CardioBoost_share,p.adjust.method = "none")
+
+
+```
+
+## Figure 3c: Hazard Ratio Plot
+```{r}
+surv_object <- Surv(time = data_CardioBoost_share$age, event = data_CardioBoost_share$Composite_Overall)
+table(data_CardioBoost_share$Class)
+fit.coxph1<-coxph(surv_object~Class,data=data_CardioBoost_share)
+#data_CardioBoost_share$Class<-factor(data_CardioBoost_share$Class,c("Genotype Negative","CardioBoost-Pathogenic","CardioBoost-Unclassified","CardioBoost-Benign","SHaRe-Pathogenic","SHaRe-VUS"))
+ggforest(fit.coxph1,data=data_CardioBoost_share)+theme_void()
+```
+
+
+## Supplmentary Figure: KM-survival plot for M-CAP stratified groups
+
+```{r mcap, echo=FALSE, fig.height=8, fig.width=10}
+data_mcap<-data3
+fit_mcap<-survfit(Surv(age,Composite_Overall)~Class,data=data_mcap)
+fit_mcap
+
+pairwise_survdiff(Surv(age, Composite_Overall) ~ Class,
+                  data = data_mcap,p.adjust.method = "none")
+
+###The one generate survival curve
+ggsurvplot(fit_mcap,combine = TRUE, pval = TRUE, censor=FALSE,break.time.by=10,
+           risk.table = TRUE,conf.int = FALSE,data = data_mcap,
+           palette = c(rgb(100,100,223,max=255),rgb(86,180,223,max=255),rgb(230,159,0,max=255),rgb(240,228,66,max=255)),
+           #palette=c("steelblue2","red2","springgreen3","lightsteelblue1","lightsalmon1","palegreen"),
+           linetype=c("solid","solid","solid","solid"),
+           tables.height = 0.2,
+           tables.theme = theme_cleantable(),xlim=c(0,70),xlab="Age(years)",ylab="Proportion Free Of Overall Composite Endpoint(%)")
+```
+
+## Supplmentary Figure: KM-survival plot for REVEL stratified groups
+
+```{r revel, fig.height=8, fig.width=10}
+data_revel<-data4
+fit_revel<-survfit(Surv(age,Composite_Overall)~Class,data=data_revel)
+fit_revel
+
+pairwise_survdiff(Surv(age, Composite_Overall) ~ Class,
+                  data = data_revel,p.adjust.method = "none")
+
+###The one generate survival curve
+ggsurvplot(fit_revel,combine = TRUE, pval = FALSE, censor=FALSE,break.time.by=10,
+           risk.table = TRUE,conf.int = FALSE,data = data_revel,
+           palette = c(rgb(100,100,223,max=255),rgb(86,180,223,max=255),rgb(230,159,0,max=255),rgb(240,228,66,max=255)),
+           #palette=c("steelblue2","red2","springgreen3","lightsteelblue1","lightsalmon1","palegreen"),
+           linetype=c("solid","solid","solid","solid"),
+           tables.height = 0.2,
+           tables.theme = theme_cleantable(),xlim=c(0,70),xlab="Age(years)",ylab="Proportion Free Of Overall Composite Endpoint(%)")
+
+
+```
