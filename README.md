@@ -11,11 +11,11 @@ To install the required R packages:
 ### Variant Classification on Cardiomyopathy and Evaluation
 
 To **preprocess** the collected features and data splitting (missing values imputation and normalisation):
-`Rscript -e "rmarkdown::render('./script/cardiomyopathy/ml/preprocess.Rmd', clean=TRUE)"`
+`./script/cardiomyopathy/ml/preprocess_full.Rmd`
 
 To **train machine learning models** using nested cross-validation (CV): optimising hyper-parameters in inner CV loop and evaluating on outer CV loop
 
-Set up how to split dataset in nested CV (i.e., fix the usage of samples in CV loops in the training of different models)
+Set up how to split dataset in nested CV 
 `Rscript ./script/cardiomyopathy/ml/tunecontrol.R`
 
 Scripts for training different machine learning models:
@@ -30,7 +30,7 @@ Scripts for training different machine learning models:
  - Support Vector Machine with radial basis function kernel: `Rscript./script/cardiomyopathy/ml/svm_RBF.R`
 
 To **evaluate** the results of training and **select** the best trained model:
-`Rscript -e "rmarkdown::render('./script/cardiomyopathy/analysis/evaluation_training.Rmd',clean=TRUE)"`
+`'./script/cardiomyopathy/analysis/evaluation_training.Rmd'`
 
 To **tune** and **train** the selected model:
 `Rscript ./script/cardiomyopathy/ada_tune.R`
@@ -38,28 +38,28 @@ To **tune** and **train** the selected model:
 
 To **evaluate** the prediction performances on **out-of-sample** datasets:
 - Hold-out test data:
-`Rscript -e "rmarkdown::render('./script/cardiomyopathy/analysis/evaluation_holdout_test.Rmd',clean=TRUE)"`
+`'./script/cardiomyopathy/analysis/evaluation_holdout_test.Rmd'`
 - Additional test data:
-`Rscript -e "rmarkdown::render('./script/cardiomyopathy/analysis/evaluation_additional_test.Rmd',clean=TRUE)"`
+`'./script/cardiomyopathy/analysis/evaluation_additional_test.Rmd'`
 
 To **generate** predictions for all possible rare missense variants on disease-associated genes:
 `Rscript ./script/cardiomyopathy/ml/cm_prediction_all_possible_variants.R`
 
 To **evaluate** the etiological fraction:
-`Rscript -e "rmarkdown::render('./script/cardiomyopathy/analysis/OR_calculation_cardioboost.Rmd',clean=TRUE)"`
-`Rscript -e "rmarkdown::render('./script/cardiomyopathy/analysis/OR_calculation_mcap.Rmd',clean=TRUE)"`
-`Rscript -e "rmarkdown::render('./script/cardiomyopathy/analysis/OR_calculation_revel.Rmd',clean=TRUE)"`
+`'./script/cardiomyopathy/analysis/OR_calculation_cardioboost.Rmd'`
+`'./script/cardiomyopathy/analysis/OR_calculation_mcap.Rmd'`
+`'./script/cardiomyopathy/analysis/OR_calculation_revel.Rmd'`
 
 To **evaluate** survival outcomes:
-`Rscript -e "rmarkdown::render('./script/cardiomyopathy/analysis/survival_analysis.Rmd',clean=TRUE)"`
+`'./script/cardiomyopathy/analysis/survival_analysis.Rmd'`
 
 To **compare** the classification performances on indirectly seen and unseen data:
-`Rscript -e "rmarkdown::render('./script/cardiomyopathy/analysis/evaluation_unseen_seen.Rmd',clean=TRUE)"`
+`'./script/cardiomyopathy/analysis/evaluation_unseen_seen.Rmd'`
 
 ### Variant Classification on Arrhythmia and Evaluation
 
 To **preprocess** the collected features (missing values imputation and normalisation):
-- ./script/arrhythmia/ml/preprocess.Rmd
+` ./script/arrhythmia/ml/preprocess_full.Rmd`
 
 To **train machine learning models** using nested cross-validation: optimising hyper-parameters in inner CV loop and evaluating on outer CV loop
 
@@ -78,16 +78,16 @@ Scripts for training different machine learning models:
  - Support Vector Machine with radial basis function kernel: `Rscript ./script/arrhythmia/ml/svm_RBF.R`
 
 To **evaluate** the results of training and **select** the best trained model:
-`Rscript -e "rmarkdown::render('./script/arrhythmia/analysis/evaluation_training.Rmd',clean=TRUE)"`
+`'./script/arrhythmia/analysis/evaluation_training.Rmd'`
 
 To **evaluate** the prediction performances on **out-of-sample** datasets:
 - Hold-out test data:
-`Rscript -e "rmarkdown::render('./script/arrhythmia/analysis/evaluation_holdout_test.Rmd',clean=TRUE)"`
+`'./script/arrhythmia/analysis/evaluation_holdout_test.Rmd'`
 - Additional test data:
-`Rscript -e "rmarkdown::render('./script/arrhythmia/analysis/evaluation_additional_test.Rmd',clean=TRUE)"`
+`'./script/arrhythmia/analysis/evaluation_additional_test.Rmd'`
 
 To **generate** predictions for all possible rare missense variants on disease-associated genes:
 `Rscript ./script/arrhythmia/ml/arm_prediction_all_possible_variants.R`
 
 To **compare** the classification performances on indirectly seen and unseen data:
-`Rscript -e "rmarkdown::render(' ./script/arrhythmia/analysis/evaluation_unseen_seen.Rmd',clean=TRUE)"`
+`' ./script/arrhythmia/analysis/evaluation_unseen_seen.Rmd'`
